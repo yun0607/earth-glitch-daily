@@ -18,9 +18,10 @@ earth-glitch-daily/
 ├── README.md              # 執行、部署、資料授權說明
 ├── index.html             # 首頁、今日介紹、歷史檔案、對話框
 ├── css/style.css          # 所有共用視覺與 RWD
-├── js/app.js              # 台灣日期、排程、搜尋、分類、iNat 圖片載入
+├── js/app.js              # 台灣日期、排程、搜尋、分類、已存照片載入
 ├── data/species.json      # 唯一發布清單（資料驅動，不複製 HTML）
 ├── scripts/validate.py    # 資料驗證與排程完整性檢查
+├── scripts/update_photos.py # 維護時查詢並儲存授權照片資料
 └── assets/                # 本站自製圖示及替代素材
 ```
 
@@ -47,7 +48,9 @@ earth-glitch-daily/
   "category": "海洋",
   "teaser": "一段簡短吸引人的介紹。",
   "feature": "一段可向可靠資料來源查證的形態特徵。",
-  "bugRating": 5
+  "bugRating": 5,
+  "taxonId": null,
+  "photo": null
 }
 ```
 
@@ -58,6 +61,8 @@ earth-glitch-daily/
 - `teaser`：15–60 個中文字左右，以趣味語氣呈現；不可把想像當作生物學事實。
 - `feature`：一個實際、具體且可追溯的特徵；不得無根據地描述危險性、棲地或保育狀態。
 - `bugRating`：整數 1–5，**是網站娛樂性評分**，不可宣稱科學量測。
+- `taxonId`：經精確學名及 species 階層核對的 iNaturalist 正整數 ID，未確認時為 `null`。
+- `photo`：無合適照片時為 `null`，否則只包含 `url`（HTTPS 圖片網址）、`author`（作者）、`attribution`（原始署名文字）、`license`（小寫授權代碼）、`source`（HTTPS 照片來源頁）。由 `scripts/update_photos.py` 選圖後寫入；不下載照片。
 - 禁止加入未取得權利的相片、任意複製第三方全文、使用無來源的 AI 生成圖片冒充真實攝影。
 
 ## 5. 日期、解鎖與排程
@@ -70,10 +75,11 @@ earth-glitch-daily/
 
 ## 6. iNaturalist 來源、照片與授權
 
-- API 用於補足物種照片與來源，網站仍以 `data/species.json` 為每日介紹的穩定資料來源。
+- API 僅於維護時由 `scripts/update_photos.py` 補足照片與來源並存入 JSON；網站直接讀取 JSON，不在開站或開啟詳細頁時查詢 API。
 - 使用 `https://api.inaturalist.org/v1/taxa?q=<學名>&rank=species`，只接受**精確學名匹配**的 species 結果。
-- 每個開啟中的詳細頁最多查詢一次相同物種，使用快取；避免每張卡片大量發送 API 請求。
+- 優先選擇授權合適的 `default_photo`；不符合時依序檢查物種的 `taxon_photos`、該物種觀察紀錄的其他照片。每張照片都須確認自身的授權、作者與網址；已存照片預設沿用，明確更新時才重查。
 - 只在圖片 `license_code` 明確屬於 `cc0`, `cc-by`, `cc-by-sa`, `cc-by-nc`, `cc-by-nc-sa` 時展示，並保留來源作者及授權文字。對 NC（非商業）圖片，只能在符合非商業條款的場景使用；不確定時停用該圖片。
+- 更新腳本預設只採用 `cc0`, `cc-by`, `cc-by-sa`；僅在已確認網站用途符合非商業條款時使用 `--allow-nc`。存入 JSON 的 NC 照片代表維護者已確認此用途。
 - API 無回傳、查無精確學名、沒有合適圖片時，顯示自製替代圖與可供檢索的 iNaturalist 來源連結。不得無條件使用 `default_photo`。
 - 不得直接把觀察資料授權與照片授權視為相同。若要下載或重新散布圖片，應重新審核使用授權及署名方式。
 - iNaturalist 不背書本網站；資料介紹如涉及科學論述應另行驗證。
@@ -86,7 +92,7 @@ earth-glitch-daily/
 3. 從 iNaturalist 選擇真實物種，確認其為 species 階層並核對學名。
 4. 排除既有 `scientificName` 重複項目，確認中文俗名與特徵正確。
 5. 在 `data/species.json` 依相同欄位順序新增一筆，不改變既有紀錄與網頁結構。
-6. 保持日期升冪排序，執行 `python scripts/validate.py`。
+6. 保持日期升冪排序，執行 `python3 scripts/update_photos.py` 補足照片，再執行 `python3 scripts/validate.py`。
 7. 在本機伺服器測試今日介紹、歷史圖鑑、篩選搜尋、詳細檔案，以及 API 失敗時畫面。
 8. 在 PR 或提交訊息寫清楚新增日期、學名、資料來源、驗證結果。
 
