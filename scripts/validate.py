@@ -2,6 +2,7 @@
 """Validate scheduled daily species; standard library only."""
 import datetime as dt
 import json
+import re
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -25,8 +26,13 @@ for i,item in enumerate(data,1):
         assert item['taxonId'] is not None, f'Entry {i}: photo requires verified taxonId'
         assert isinstance(photo,dict) and set(photo)==photo_fields, f'Entry {i}: wrong photo fields'
         assert all(isinstance(photo[k],str) and photo[k].strip() for k in photo_fields), f'Entry {i}: missing photo metadata'
-        assert photo['license'] in licenses, f'Entry {i}: unsupported photo license'
-        assert https_url(photo['url']) and https_url(photo['source']), f'Entry {i}: photo URLs must use HTTPS'
+        if photo['license'] == 'user-provided':
+            assert re.fullmatch(r'assets/photos/[A-Za-z0-9_-]+\.(?:png|jpg|jpeg|webp)', photo['url']), f'Entry {i}: invalid local photo path'
+            assert photo['source'] == photo['url'], f'Entry {i}: local source must link to supplied image'
+            assert (P.parents[1] / photo['url']).is_file(), f'Entry {i}: local photo missing'
+        else:
+            assert photo['license'] in licenses, f'Entry {i}: unsupported photo license'
+            assert https_url(photo['url']) and https_url(photo['source']), f'Entry {i}: photo URLs must use HTTPS'
     day=dt.date.fromisoformat(item['date'])
     assert day.isoformat()==item['date'], f'Entry {i}: invalid ISO date'
     assert item['category'] in allowed, f'Entry {i}: invalid category'

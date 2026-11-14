@@ -63,6 +63,7 @@ earth-glitch-daily/
 - `bugRating`：整數 1–5，**是網站娛樂性評分**，不可宣稱科學量測。
 - `taxonId`：經精確學名及 species 階層核對的 iNaturalist 正整數 ID，未確認時為 `null`。
 - `photo`：無合適照片時為 `null`，否則只包含 `url`（HTTPS 圖片網址）、`author`（作者）、`attribution`（原始署名文字）、`license`（小寫授權代碼）、`source`（HTTPS 照片來源頁）。由 `scripts/update_photos.py` 選圖後寫入；不下載照片。
+- 使用者明確指定的本站圖片可存於 `assets/photos/`，`license` 設為 `user-provided`（來源類型，並非開放授權）；`url`、`source` 使用該目錄的相對路徑。未提供作者時標示「作者未提供」，不冒用原 iNaturalist 照片的作者或 CC 授權。
 - 禁止加入未取得權利的相片、任意複製第三方全文、使用無來源的 AI 生成圖片冒充真實攝影。
 
 ## 5. 日期、解鎖與排程

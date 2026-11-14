@@ -8,16 +8,17 @@ let species = [], today = taiwanDate();
 function buildFallback(el){ el.innerHTML = '<span class="photo-placeholder" role="img" aria-label="圖像暫缺">✳</span>'; }
 function savedPhoto(item){
   const photo=item.photo;
-  const allowed=photo && validLicenses.has(photo.license) && /^https:\/\//.test(photo.url) && /^https:\/\//.test(photo.source) && photo.author && photo.attribution;
+  const local=photo?.license==='user-provided' && /^assets\/photos\/[A-Za-z0-9_-]+\.(png|jpg|jpeg|webp)$/.test(photo.url) && photo.source===photo.url;
+  const allowed=photo && (local || (validLicenses.has(photo.license) && /^https:\/\//.test(photo.url) && /^https:\/\//.test(photo.source))) && photo.author && photo.attribution;
   return {taxonId:item.taxonId,photo:allowed?photo:null,source:item.taxonId?`https://www.inaturalist.org/taxa/${item.taxonId}`:`https://www.inaturalist.org/search?q=${encodeURIComponent(item.scientificName)}`};
 }
 function unlocked(item){return item.date<=today;}
 function makePhoto(item,info,target){
   if(!info.photo){buildFallback(target);return;}
   const photo=info.photo;
-  target.innerHTML='';const img=document.createElement('img');img.alt=`${item.title}（iNaturalist 授權照片）`;img.loading='lazy';img.referrerPolicy='no-referrer';img.onerror=()=>buildFallback(target);img.src=photo.url;target.append(img);
+  target.innerHTML='';const img=document.createElement('img');img.alt=`${item.title}（${photo.license==='user-provided'?'使用者提供圖片':'iNaturalist 授權照片'}）`;img.loading='lazy';img.referrerPolicy='no-referrer';img.onerror=()=>buildFallback(target);img.src=photo.url;target.append(img);
   const label=document.createElement('div');label.className='photo-credit';
-  const source=document.createElement('a');source.href=photo.source;source.target='_blank';source.rel='noopener noreferrer';source.textContent=`圖片：${photo.attribution} · ${photo.license.toUpperCase()}`;
+  const source=document.createElement('a');source.href=photo.source;source.target='_blank';source.rel='noopener noreferrer';source.textContent=`圖片：${photo.attribution}${photo.license==='user-provided'?'':` · ${photo.license.toUpperCase()}`}`;
   label.append(source);target.append(label);
 }
 
@@ -46,7 +47,7 @@ function renderArchive(){
 async function openDetail(item){
   if(!unlocked(item))return;
   const modal=document.createElement('div');modal.className='modal';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label',`${item.title}研究檔案`);
-  modal.innerHTML=`<div class="dialog panel"><button class="close" aria-label="關閉">×</button><span class="eyebrow">SPECIMEN FILE · ${escapeHTML(readableDate(item.date))}</span><h2>${escapeHTML(item.title)}</h2><div class="latin">${escapeHTML(item.scientificName)}</div><div class="photo-panel" id="modal-photo" style="min-height:235px;margin:20px 0"><span class="photo-placeholder">✳</span></div><p>${escapeHTML(item.teaser)}</p><dl><dt>分類</dt><dd>${escapeHTML(item.category)}</dd><dt>奇特特徵</dt><dd>${escapeHTML(item.feature)}</dd><dt>BUG 指數</dt><dd>${'★'.repeat(item.bugRating)}（娛樂指標）</dd><dt>物種來源</dt><dd id="source-detail">來源載入中…</dd></dl><p class="credit">來源為 iNaturalist。圖片與物種文字不代表 iNaturalist 官方推薦；如圖片無適合的開放授權則顯示替代圖。</p></div>`;
+  modal.innerHTML=`<div class="dialog panel"><button class="close" aria-label="關閉">×</button><span class="eyebrow">SPECIMEN FILE · ${escapeHTML(readableDate(item.date))}</span><h2>${escapeHTML(item.title)}</h2><div class="latin">${escapeHTML(item.scientificName)}</div><div class="photo-panel" id="modal-photo" style="min-height:235px;margin:20px 0"><span class="photo-placeholder">✳</span></div><p>${escapeHTML(item.teaser)}</p><dl><dt>分類</dt><dd>${escapeHTML(item.category)}</dd><dt>奇特特徵</dt><dd>${escapeHTML(item.feature)}</dd><dt>BUG 指數</dt><dd>${'★'.repeat(item.bugRating)}（娛樂指標）</dd><dt>物種來源</dt><dd id="source-detail">來源載入中…</dd></dl><p class="credit">物種來源為 iNaturalist，圖片來源依個別標示。本站內容不代表 iNaturalist 官方推薦；無可用圖片時顯示替代圖。</p></div>`;
   document.body.append(modal);const close=()=>{modal.remove();document.removeEventListener('keydown',onKey)};const onKey=e=>{if(e.key==='Escape')close()};document.addEventListener('keydown',onKey);
   modal.querySelector('.close').addEventListener('click',close);modal.addEventListener('click',e=>{if(e.target===modal)close()});modal.querySelector('.close').focus();
   const info=savedPhoto(item);if(!modal.isConnected)return;
